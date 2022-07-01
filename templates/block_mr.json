@@ -1,0 +1,42 @@
+[
+    {
+        "type": "header",
+        "text": {
+            "type": "plain_text",
+            "text": "$title$"
+        }
+    },
+    {
+        "type": "section",
+        "fields": [
+            {
+                "type": "mrkdwn",
+                "text": "Created by:*\n<$author_url$|$author_name$>"
+            },
+            {
+                "type": "mrkdwn",
+                "text": "*Project:*\n$project_id$"
+            }
+        ]
+    },
+    {
+        "type": "section",
+        "fields": [
+            {
+                "type": "mrkdwn",
+                "text": "*State:*\n$state$"
+            },
+            {
+                "type": "mrkdwn",
+                "text": "*Thumbs Up:*\n$upvotes$ :thumbsup:"
+            }
+        ]
+    },
+    {
+        "type": "section",
+        "text": {
+            "type": "mrkdwn",
+            "text": "<$web_url$|View merge request>"
+        }
+    }
+]

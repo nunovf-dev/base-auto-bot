@@ -32,14 +32,32 @@ KEY_VAULT_NAME = os.getenv('KEY_VAULT_NAME')
 #               GITLAB                 #
 ########################################
 
+headers = {'PRIVATE-TOKEN': GITLAB_TOKEN}
+
+########################################
+#           AZURE KEY VAULT            #
+########################################
+
+kv_url = f'https://{KEY_VAULT_NAME}.vault.azure.net'
+kv_credential = DefaultAzureCredential()
+kv_client = SecretClient(vault_url=kv_url, credential=kv_credential)
 
 ########################################
 #                USERS                 #
 ########################################
 
+"""
 def load_users():
     with open("users/users.json", 'r') as r:
         return json.load(r)
+"""
+
+def load_users():
+    usernames = kv_client.get_secret("usernames")
+
+    users = {}
+    for user in json.loads(usernames.value)['usernames']:
+        users[user] = json.loads(kv_client.get_secret(user).values)
 
 users = load_users()
 
@@ -164,8 +182,6 @@ def handle_reaction_added(context, event, body, request, req, payload):
                                                     inclusive=True, oldest=event['item']['ts'], limit=1)
         url_given = find_by_key(result['messages'][0], "url")
 
-        headers = {'PRIVATE-TOKEN': GITLAB_TOKEN}
-
         mr = requests.post(f'{get_mr_url(url_given)}/award_emoji?name=thumbsup', headers=headers).json()
     pprint.pprint(mr)
 
@@ -176,8 +192,6 @@ def handle_reaction_removed(event):
         result = app.client.conversations_history(token=SLACK_BOT_TOKEN, channel=event['item']['channel'],
                                                     inclusive=True, oldest=event['item']['ts'], limit=1)
         url_given = find_by_key(result['messages'][0], "url")
-
-        headers = {'PRIVATE-TOKEN': GITLAB_TOKEN}
 
         emojis = requests.get(f'{get_mr_url(url_given)}/award_emoji', headers=headers).json()
         for emoji in emojis:
@@ -191,11 +205,10 @@ def handle_reaction_removed(event):
 def handle_mr_added(message, say, event):
 
     url_given = find_by_key(message, "url")
-    headers = {'PRIVATE-TOKEN': GITLAB_TOKEN}
 
     mr = requests.get(get_mr_url(url_given), headers=headers).json()
 
-    blocks = block_replace(title=mr['title'], author_url=mr['author']['web_url'], author_name=mr['author']['name'], 
+    blocks = block_create(title=mr['title'], author_url=mr['author']['web_url'], author_name=mr['author']['name'], 
                             project_id=mr['project_id'], state=mr['state'], upvotes=mr['upvotes'], web_url=mr['web_url'])
 
     say(token=SLACK_BOT_TOKEN, text="", blocks=blocks)

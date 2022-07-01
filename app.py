@@ -16,6 +16,55 @@ from slack_bolt.oauth.callback_options import CallbackOptions, SuccessArgs, Fail
 from slack_bolt.response import BoltResponse
 
 ########################################
+#               TOOLS                  #
+########################################
+
+def load_users():
+    for user_name in json.loads(kv_client.get_secret("user_names").value)['user_names']:
+        users[user_name] = json.loads(kv_client.get_secret(user_name).value)
+
+def add_user(user_name, gitlab_token=None, slack_id=None, slack_token=None):
+    user_old = json.loads(kv_client.get_secret(user_name).value)
+    user_new = {
+        "gitlab_token": gitlab_token if gitlab_token else user_old['gitlab_token'],
+        "slack_id": slack_id if slack_id else user_old['slack_id'],
+        "slack_token": slack_token if slack_token else user_old['slack_token'],
+    }
+    users[user_name] = user_new
+    kv_client.set_secret(f'user_name', user_new)
+
+def find_by_key(data, target):
+    for k, v in data.items():
+        if k == target:
+            return v
+        elif isinstance(v, dict):
+            return find_by_key(v, target)
+        elif isinstance(v, list):
+            for i in v:
+                if isinstance(i, dict):
+                    return find_by_key(i, target)
+
+def get_mr_url(url):
+    prt = url.partition("/merge_requests/")
+    project_name = prt[0].rsplit(sep="/", maxsplit=1)[1]
+    mergerequest_id = re.sub("\D", "", url)
+    project_id = project_ids[project_name]
+    url_base = "https://gitlab.fftech.info/api/v4/projects/"
+    
+    return f'{url_base}{project_id}/merge_requests/{mergerequest_id}'
+
+def block_create(title, author_url, author_name, project_id, state, upvotes, web_url):
+    frame = inspect.currentframe()
+    try:
+        args, _, _, values = inspect.getargvalues(frame)
+        txt = Path("templates/block_mr.json").read_text()
+        for arg in args:
+            txt = re.sub(f'\${arg}\$', f'{values[arg]}', txt)
+    finally:
+        del frame
+        return txt
+
+########################################
 #               TOKENS                 #
 ########################################
 
@@ -46,20 +95,8 @@ kv_client = SecretClient(vault_url=kv_url, credential=kv_credential)
 #                USERS                 #
 ########################################
 
-"""
-def load_users():
-    with open("users/users.json", 'r') as r:
-        return json.load(r)
-"""
-
-def load_users():
-    usernames = kv_client.get_secret("usernames")
-
-    users = {}
-    for user in json.loads(usernames.value)['usernames']:
-        users[user] = json.loads(kv_client.get_secret(user).values)
-
-users = load_users()
+users = {}
+load_users()
 
 slack_ids = {
     "U03K8739CF8": "nuno.venturinha",
@@ -80,49 +117,6 @@ project_ids = {
     "saltstack": 3874,
     "update-blueprints": 14837
 }
-
-########################################
-#               TOOLS                  #
-########################################
-
-def find_by_key(data, target):
-    for k, v in data.items():
-        if k == target:
-            return v
-        elif isinstance(v, dict):
-            return find_by_key(v, target)
-        elif isinstance(v, list):
-            for i in v:
-                if isinstance(i, dict):
-                    return find_by_key(i, target)
-
-def get_mr_url(url):
-    prt = url.partition("/merge_requests/")
-    project_name = prt[0].rsplit(sep="/", maxsplit=1)[1]
-    mergerequest_id = re.sub("\D", "", url)
-    project_id = project_ids[project_name]
-    url_base = "https://gitlab.fftech.info/api/v4/projects/"
-    
-    return f'{url_base}{project_id}/merge_requests/{mergerequest_id}'
-
-def add_user(users, user_name, gitlab_token=None, slack_id=None, slack_token=None):
-
-    users[user_name] = {
-        "gitlab_token": gitlab_token,
-        "slack_id": slack_id,
-        "slack_token": slack_token
-    }
-
-def block_create(title, author_url, author_name, project_id, state, upvotes, web_url):
-    frame = inspect.currentframe()
-    try:
-        args, _, _, values = inspect.getargvalues(frame)
-        txt = Path("templates/block_mr.json").read_text()
-        for arg in args:
-            txt = re.sub(f'\${arg}\$', f'{values[arg]}', txt)
-    finally:
-        del frame
-        return txt
 
 ########################################
 #               CALLBACK               #

@@ -156,7 +156,6 @@ oauth_settings = OAuthSettings(
     client_id=SLACK_CLIENT_ID,
     client_secret=SLACK_CLIENT_SECRET,
     user_scopes=["reactions:write"],
-    #redirect_uri="https://salty-buckets-begin-89-115-249-50.loca.lt/slack/oauth_redirect",
     callback_options=CallbackOptions(success=success, failure=failure)
 )
 

@@ -11,7 +11,7 @@
         "fields": [
             {
                 "type": "mrkdwn",
-                "text": "Created by:*\n<$author_url$|$author_name$>"
+                "text": "*Created by:*\n$author_name$"
             },
             {
                 "type": "mrkdwn",
